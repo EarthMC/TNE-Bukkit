@@ -1,4 +1,4 @@
-package net.tnemc.signs.signs.impl.toitem.menu.offer;
+package net.tnemc.signs.signs.impl;
 
 import net.tnemc.core.TNE;
 import net.tnemc.core.common.api.IDFinder;
@@ -12,6 +12,7 @@ import org.bukkit.Sound;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -59,8 +60,9 @@ public class ConfirmBuyIcon extends Icon {
       return;
     }
 
-    if(ItemCalculations.getCount(item, player.getInventory()) < amount) {
-      player.sendMessage(ChatColor.RED + "You don't have enough items to trade with this shop.");
+    ItemStack hand = player.getInventory().getItemInMainHand();
+    if(hand.getType() != item.getType() || hand.getDurability() != item.getDurability() || hand.getAmount() < amount) {
+      player.sendMessage(ChatColor.RED + "You don't have enough of the trade item in your main hand to buy from this shop.");
       player.playSound(player.getLocation(), Sound.ENTITY_ARMOR_STAND_BREAK, 5f, 5f);
       return;
     }
@@ -95,7 +97,10 @@ public class ConfirmBuyIcon extends Icon {
     }
 
     if (complete) {
-      ItemCalculations.removeItemAmount(item, player.getInventory(), amount);
+        PlayerInventory inventory = player.getInventory();
+        hand.setAmount(hand.getAmount() - amount);
+        inventory.setItemInMainHand(hand);
+
       if(!admin) ItemCalculations.giveItem(item, ItemSign.getChestInventory(chest), amount);
 
       player.sendMessage(ChatColor.GREEN + "Successfully bought item.");

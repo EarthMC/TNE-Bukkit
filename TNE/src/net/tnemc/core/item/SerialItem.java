@@ -312,6 +312,7 @@ public class SerialItem {
     TNE.debug("fromJSON");
     Material material = Material.matchMaterial(helper.getString("material"));
     if(material == null || material == Material.AIR) {
+      System.out.println("THERE WAS AIR");
       return null;
     }
     TNE.debug("Material: " + material.name());

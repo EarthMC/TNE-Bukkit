@@ -10,3 +10,6 @@ bin/
 /target/
 /TNE/target/
 fiotnh33.xot.txt
+target/
+.settings/
+.DS_Store

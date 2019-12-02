@@ -2,8 +2,8 @@ package net.tnemc.signs.signs.impl.nitem.menu;
 
 import net.tnemc.core.TNE;
 import net.tnemc.core.menu.Menu;
-import net.tnemc.signs.signs.impl.nitem.menu.offer.ConfirmBuyIcon;
-import net.tnemc.signs.signs.impl.nitem.menu.offer.ConfirmIcon;
+import net.tnemc.signs.signs.impl.ConfirmBuyIcon;
+import net.tnemc.signs.signs.impl.ConfirmIcon;
 import net.tnemc.signs.signs.impl.nitem.menu.offer.CostIcon;
 import net.tnemc.signs.signs.impl.nitem.menu.offer.ItemIcon;
 import org.bukkit.ChatColor;
