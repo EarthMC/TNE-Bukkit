@@ -88,7 +88,7 @@ public class ConfirmIcon extends Icon {
       }
 
       PlayerInventory inventory = player.getInventory();
-      hand.setAmount(hand.getAmount() - amount);
+      hand.setAmount(hand.getAmount() - trade.getAmount());
       inventory.setItemInMainHand(hand);
 
       if(!admin) ItemCalculations.giveItem(trade, ItemSign.getChestInventory(chest), tradeAmount);
