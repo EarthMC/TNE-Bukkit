@@ -13,6 +13,9 @@ Core:
     #Whether or not players should have different balances, banks, etc in different worlds
     Multiworld: false
 
+    #The name of the world to use if multiworld is set to false. Setting to TNE_SYSTEM will let TNE decide the default world.
+    DefaultWorld: "TNE_SYSTEM"
+
     #Whether or not to load TNE in debug mode.
     Debug: false
 
@@ -73,15 +76,6 @@ Core:
         #The command trigger(s) used to identify what is and isn't a command.
         #To use multiple triggers, separate with comma, i.e. /,!.
         Triggers: "/"
-
-        #Whether or not players should be able to use /pay instead of /money pay
-        PayShort: true
-
-        #Whether or not players should be able to use /balance instead of /money
-        BalanceShort: true
-
-        #Whether or not players should be able to use /baltop instead of /money top
-        TopShort: true
 
         #Configurations relating to the money top command.
         Top:

@@ -19,6 +19,8 @@ package net.tnemc.core.common.configurations;
 import com.github.tnerevival.TNELib;
 import net.tnemc.config.CommentedConfiguration;
 import net.tnemc.core.TNE;
+import net.tnemc.core.common.WorldVariant;
+import net.tnemc.core.common.account.WorldFinder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,10 +93,11 @@ public class ConfigurationManager {
 
   public boolean reload(String configID) {
     if(configID.equalsIgnoreCase("all")) {
-      TNE.instance().initializeConfigurations(false);
+      TNE.instance().loadConfigurations();
       return true;
     } else if(configID.equalsIgnoreCase("currency")) {
-
+      TNE.manager().currencyManager().loadCurrencies();
+      TNE.manager().currencyManager().loadRecipes();
     } else if(loaded.contains(configID)) {
       load(configurations.get(configID).getConfiguration(), configID);
       return true;
@@ -108,6 +111,15 @@ public class ConfigurationManager {
   }
 
   public Object getValue(String node, String configuration, String world, String player) {
+
+    if(TNE.instance().playerConfigurations().hasValue(player, node)) {
+      return TNE.instance().playerConfigurations().getValue(player, node);
+    }
+
+    if(TNE.instance().hasWorldManager(world) && TNE.instance().getWorldManager(WorldFinder.getWorldName(world, WorldVariant.CONFIGURATION)).configExists(node)) {
+      return TNE.instance().getWorldManager(WorldFinder.getWorldName(world, WorldVariant.CONFIGURATION)).getConfiguration(node);
+    }
+
     return getConfiguration(configuration).getValue(node, world, player);
   }
 

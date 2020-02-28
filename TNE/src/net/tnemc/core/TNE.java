@@ -31,6 +31,7 @@ import net.tnemc.core.common.api.ReserveEconomy;
 import net.tnemc.core.common.api.TNEAPI;
 import net.tnemc.core.common.configurations.MainConfigurations;
 import net.tnemc.core.common.configurations.MessageConfigurations;
+import net.tnemc.core.common.configurations.PlayerConfigurations;
 import net.tnemc.core.common.configurations.WorldConfigurations;
 import net.tnemc.core.common.data.TNEDataManager;
 import net.tnemc.core.common.data.TNESaveManager;
@@ -77,7 +78,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -105,7 +109,7 @@ public class TNE extends TNELib {
   //constants
   public static final String coreURL = "https://tnemc.net/files/module-version.xml";
 
-  public static final String build = "4Beta118M";
+  public static final String build = "2Beta119";
   public final List<String> developers = Collections.singletonList("5bb0dcb3-98ee-47b3-8f66-3eb1cdd1a881");
 
   //Map containing module sub commands to add to our core commands
@@ -140,14 +144,12 @@ public class TNE extends TNELib {
 
   // Files & Custom Configuration Files
   private File mainConfig;
-  private File currencies;
   private File items;
   private File messagesFile;
   private File players;
   private File worlds;
 
   private CommentedConfiguration mainConfigurations;
-  private CommentedConfiguration currencyConfigurations;
   private CommentedConfiguration itemConfigurations;
   private CommentedConfiguration messageConfigurations;
   private CommentedConfiguration playerConfigurations;
@@ -156,13 +158,14 @@ public class TNE extends TNELib {
   private MainConfigurations main;
   private MessageConfigurations messages;
   private WorldConfigurations world;
+  private PlayerConfigurations player;
 
   //BukkitRunnable Workers
   private SaveWorker saveWorker;
 
   private boolean blacklisted = false;
   public static boolean useMod = false;
-  public static boolean fawe = false;
+  public static boolean fawe = true;
 
   public void onLoad() {
     if(MISCUtils.serverBlacklist().contains(getServer().getIp())) {
@@ -228,19 +231,24 @@ public class TNE extends TNELib {
     });
 
     //Configurations
-    initializeConfigurations();
+    loadConfigurations();
 
-    TNE.debug("Preparing configuration instances");
-    main = new MainConfigurations();
 
-    exclusions = main.getConfiguration().getStringList("Core.Commands.Top.Exclusions");
-    messages = new MessageConfigurations();
-    messages.load(messageConfigurations);
+
+    if(!mainConfigurations.getString("Core.DefaultWorld", "TNE_SYSTEM").equalsIgnoreCase("TNE_SYSTEM")) {
+      addWorldManager(new WorldManager(defaultWorld));
+    }
+    getServer().getWorlds().forEach(world-> worldManagers.put(world.getName(), new WorldManager(world.getName(), mainConfigurations.getBool("Core.Multiworld"))));
+
     world = new WorldConfigurations();
     world.load(worldConfigurations);
 
     TNE.debug("Preparing debug mode");
     this.debugMode = mainConfigurations.getBool("Core.Debug");
+
+    if(!mainConfigurations.getString("Core.DefaultWorld", "TNE_SYSTEM").equalsIgnoreCase("TNE_SYSTEM")) {
+      defaultWorld = mainConfigurations.getString("Core.DefaultWorld");
+    }
 
     if(!mainConfigurations.contains("Core.Currency.Basic.Identifier")) {
       LinkedList<String> comments = new LinkedList<>();
@@ -259,9 +267,8 @@ public class TNE extends TNELib {
     TNE.debug("Preparing configurations for manager");
     configurations().add(main, "main");
     configurations().add(messages, "messages");
+    configurations().add(player, "player");
     configurations().add(world, "world");
-
-    getServer().getWorlds().forEach(world-> worldManagers.put(world.getName(), new WorldManager(world.getName())));
 
     TNE.debug("Preparing commands");
     List<String> moneyArguments = new ArrayList<>(Arrays.asList("money", "givemoney", "givebal", "setbal", "setmoney", "takemoney", "takebal"));
@@ -318,9 +325,27 @@ public class TNE extends TNELib {
     }));
     commandManager.registerCommands();
 
+    //Check to see if the currencies directory exists, and if not create it and add the default USD currency.
+    final File currenciesDirectory = new File(getDataFolder(), "currencies");
+    if(!currenciesDirectory.exists()) {
+      final File tiersDirectory = new File(currenciesDirectory, "USD");
+      tiersDirectory.mkdirs();
+
+      final CommentedConfiguration usd = new CommentedConfiguration(new File(currenciesDirectory, "USD.yml"), new InputStreamReader(this.getResource("currency/USD.yml"), StandardCharsets.UTF_8));
+      usd.load();
+
+      final CommentedConfiguration one = new CommentedConfiguration(new File(tiersDirectory, "one.yml"), new InputStreamReader(this.getResource("currency/USD/one.yml"), StandardCharsets.UTF_8));
+      one.load();
+
+      final CommentedConfiguration penny = new CommentedConfiguration(new File(tiersDirectory, "penny.yml"), new InputStreamReader(this.getResource("currency/USD/penny.yml"), StandardCharsets.UTF_8));
+      penny.load();
+
+    }
+
     //Initialize our plugin's managers.
     TNE.debug("Preparing managers");
     manager = new EconomyManager();
+    manager.currencyManager().loadCurrencies();
     manager.currencyManager().loadRecipes();
 
     //General Variables based on configuration values
@@ -447,11 +472,6 @@ public class TNE extends TNELib {
         value.getModule().postLoad(this)
     );
 
-    TNE.debug("Preparing placeholders");
-    if(Bukkit.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-      new EconomyPlaceholders().register();
-    }
-
     moduleCache = new ModuleFileCache();
 
     //Metrics
@@ -488,7 +508,19 @@ public class TNE extends TNELib {
       Bukkit.getMessenger().registerIncomingPluginChannel(this, "tnemod", new TNEMessageListener());
     }
 
+
+
+    TNE.debug("Preparing placeholders");
+    if(Bukkit.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+      new EconomyPlaceholders(this).register();
+    }
+
     getLogger().info("The New Economy has been enabled!");
+    /*try {
+      writeCommands();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }*/
   }
 
   public void onDisable() {
@@ -513,6 +545,51 @@ public class TNE extends TNELib {
     SQLDatabase.getDataSource().close();
     getLogger().info("The New Economy has been disabled!");
     super.onDisable();
+  }
+
+  private void writeCommands() throws IOException {
+    BufferedWriter writer = new BufferedWriter(new FileWriter(new File(getDataFolder(), "commands.txt")));
+    final String newLine = System.getProperty("line.separator");
+
+    for(TNECommand command : commandManager.commands.values()) {
+      writer.write(newLine);
+      writer.write("  " + command.name() + ":" + newLine);
+
+      if(command.aliases().length > 0) {
+        writer.write("    Alias:" + newLine);
+
+        for(String alias : command.aliases()) {
+          writer.write("      - " + alias + newLine);
+        }
+      }
+      writer.write("    Permission: \"" + command.node() + "\"" + newLine);
+      writer.write("    Console: " + command.console() + newLine);
+      writer.write("    Player: true" + newLine);
+      writer.write("    Developer: " + command.developer() + newLine);
+      writer.write("    Description: \"" + command.helpLine() + "\"" + newLine);
+      writer.write("    Executor: \"" + command.name() + "_exe\"" + newLine);
+
+      if(command.getSubCommands().size() > 0) {
+        writer.write("    Sub:" + newLine);
+        for(TNECommand sub : command.getSubCommands().values()) {
+          writer.write("      " + sub.name() + ":" + newLine);
+
+          if(sub.aliases().length > 0) {
+            writer.write("        Alias:" + newLine);
+
+            for(String alias : sub.aliases()) {
+              writer.write("          - " + alias + newLine);
+            }
+          }
+          writer.write("        Permission: \"" + sub.node() + "\"" + newLine);
+          writer.write("        Console: " + sub.console() + newLine);
+          writer.write("        Player: true" + newLine);
+          writer.write("        Developer: " + sub.developer() + newLine);
+          writer.write("        Description: \"" + sub.helpLine() + "\"" + newLine);
+          writer.write("        Executor: \"" + sub.name() + "_exe\"" + newLine);
+        }
+      }
+    }
   }
 
   private void writeMobs() throws IOException {
@@ -629,6 +706,26 @@ public class TNE extends TNELib {
     return false;
   }
 
+  public boolean onCustard(CommandSender sender, Command command, String label, String[] arguments) {
+    List<String> triggers = new ArrayList<>(Arrays.asList(TNE.configurations().getString( "Core.Commands.Triggers", "main", "", "").split(",")));
+
+    if(sender instanceof Player && !triggers.contains("/")) return false;
+    return custardCommand(sender, label, arguments);
+  }
+
+  public boolean custardCommand(CommandSender sender, String label, String[] arguments) {
+
+    TNECommand ecoCommand = commandManager.find(label);
+    if(ecoCommand != null) {
+      if(!ecoCommand.canExecute(sender)) {
+        sender.sendMessage(ChatColor.RED + "I'm sorry, but you're not allowed to use that command.");
+        return false;
+      }
+      return ecoCommand.execute(sender, label, arguments);
+    }
+    return false;
+  }
+
   public String sanitizeWorld(String world) {
     if(hasWorldManager(world)) return getWorldManager(world).getBalanceWorld();
     return world;
@@ -720,8 +817,21 @@ public class TNE extends TNELib {
     return worldConfigurations;
   }
 
-  public CommentedConfiguration getCurrencyConfigurations() {
-    return currencyConfigurations;
+  public void loadConfigurations() {
+    initializeConfigurations();
+
+    TNE.debug("Preparing configuration instances");
+    main = new MainConfigurations();
+
+    exclusions = main.getConfiguration().getStringList("Core.Commands.Top.Exclusions");
+    messages = new MessageConfigurations();
+    messages.load(messageConfigurations);
+    player = new PlayerConfigurations();
+    player.load(playerConfigurations);
+  }
+
+  public void loadCurrencies() {
+
   }
 
   public void initializeConfigurations() {
@@ -731,7 +841,6 @@ public class TNE extends TNELib {
   public void initializeConfigurations(boolean item) {
     TNE.logger().info("Loading Configurations.");
     mainConfig = new File(getDataFolder(), "config.yml");
-    currencies = new File(getDataFolder(), "currency.yml");
     items = new File(getDataFolder(), "items.yml");
     messagesFile = new File(getDataFolder(), "messages.yml");
     players = new File(getDataFolder(), "players.yml");
@@ -743,8 +852,7 @@ public class TNE extends TNELib {
     skip.add("Virtual");
     mainConfigurations = initializeConfiguration(mainConfig, "config.yml");
     TNE.logger().info("Initialized config.yml");
-    currencyConfigurations = initializeConfiguration(currencies, "currency.yml");
-    TNE.logger().info("Initialized currency.yml");
+    TNE.logger().info("Initialized commands.yml");
     messageConfigurations = initializeConfiguration(messagesFile, "messages.yml");
     TNE.logger().info("Initialized messages.yml");
     playerConfigurations = initializeConfiguration(players, "players.yml");
@@ -801,6 +909,21 @@ public class TNE extends TNELib {
     return commentedConfiguration;
   }
 
+  InputStream getResourceUTF8(String filename) {
+    try {
+      URL url = getClass().getClassLoader().getResource(filename);
+      if (url == null) {
+        return null;
+      } else {
+        URLConnection connection = url.openConnection();
+        connection.setUseCaches(false);
+        return connection.getInputStream();
+      }
+    } catch (IOException var4) {
+      return null;
+    }
+  }
+
   public static void debug(StackTraceElement[] stack) {
     System.out.println("Please let a professional know about the following:");
     System.out.println("------------------- TNE Error Log -------------------");
@@ -842,13 +965,8 @@ public class TNE extends TNELib {
   }
 
   public WorldManager getWorldManager(String world) {
-    for(WorldManager manager : this.worldManagers.values()) {
-      if(manager.getWorld().equalsIgnoreCase(world)) {
-        debug("Return World Manager for world " + world);
-        return manager;
-      }
-    }
-    return worldManagers.get(defaultWorld);
+    TNE.debug("Returning World Manager for World: " + world);
+    return worldManagers.getOrDefault(world, new WorldManager(world, mainConfigurations.getBool("Core.Multiworld")));
   }
 
   public Collection<WorldManager> getWorldManagers() {
@@ -865,6 +983,14 @@ public class TNE extends TNELib {
 
   public File getWorlds() {
     return worlds;
+  }
+
+  public File getPlayers() {
+    return players;
+  }
+
+  public PlayerConfigurations playerConfigurations() {
+    return player;
   }
 
   public ModuleFileCache moduleCache() {

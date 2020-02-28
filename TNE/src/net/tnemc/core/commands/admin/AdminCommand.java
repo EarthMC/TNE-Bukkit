@@ -16,7 +16,6 @@ public class AdminCommand extends TNECommand {
   public AdminCommand(TNE plugin) {
     super(plugin);
     addSub(new AdminAccountCommand(plugin));
-    addSub(new AdminBackupCommand(plugin));
     addSub(new AdminBalanceCommand(plugin));
     addSub(new AdminBuildCommand(plugin));
     addSub(new AdminCaveatsCommand(plugin));
@@ -24,13 +23,15 @@ public class AdminCommand extends TNECommand {
     addSub(new AdminDebugCommand(plugin));
     addSub(new AdminDeleteCommand(plugin));
     addSub(new AdminExtractCommand(plugin));
-    addSub(new AdminIDCommand(plugin));
+    //addSub(new AdminIDCommand(plugin));
+    addSub(new DeveloperIDCommand(plugin));
     addSub(new AdminIDExportCommand(plugin));
     //addSub(new AdminIndependenceCommand(plugin));
     addSub(new AdminMaintenanceMode(plugin));
     addSub(new AdminMenuCommand(plugin));
     addSub(new AdminPlayerCommand(plugin));
     addSub(new AdminPurgeCommand(plugin));
+    addSub(new AdminReloadCommand(plugin));
     addSub(new AdminReportCommand(plugin));
     addSub(new AdminResetCommand(plugin));
     addSub(new AdminRestoreCommand(plugin));

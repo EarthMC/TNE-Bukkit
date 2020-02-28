@@ -1,5 +1,6 @@
 package net.tnemc.core.common.currency.formatter.impl;
 
+import net.tnemc.core.TNE;
 import net.tnemc.core.common.currency.TNECurrency;
 import net.tnemc.core.common.currency.formatter.FormatRule;
 import org.bukkit.Location;
@@ -24,6 +25,8 @@ public class SymbolRule implements FormatRule {
 
   @Override
   public String format(TNECurrency currency, BigDecimal amount, Location location, String player, String formatted) {
+    TNE.debug("Symbol: " + currency.symbol());
+    TNE.debug("Formatted: " + formatted.replace("<symbol>", currency.symbol()));
     return formatted.replace("<symbol>", currency.symbol());
   }
 }

@@ -40,8 +40,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -73,50 +75,68 @@ public class MISCUtils {
    * @return Whether the bukkit in use is for MC >= 1.8
    */
   public static boolean isOneSeven() {
-    return Bukkit.getVersion().contains("1.7") || isOneEight() || isOneNine() || isOneTen() || isOneEleven() || isOneTwelve() || isOneThirteen() || isOneFourteen();
+    return Bukkit.getVersion().contains("1.7") || isOneEight() || isOneNine() || isOneTen() || isOneEleven()
+        || isOneTwelve() || isOneThirteen() || isOneFourteen() || isOneFifteen() || isOneSixteen() || isOneSeventeen();
   }
 
   /**
    * @return Whether the bukkit in use is for MC >= 1.8
    */
   public static boolean isOneEight() {
-    return Bukkit.getVersion().contains("1.8") || isOneNine() || isOneTen() || isOneEleven() || isOneTwelve() || isOneThirteen() || isOneFourteen();
+    return Bukkit.getVersion().contains("1.8") || isOneNine() || isOneTen() || isOneEleven() || isOneTwelve()
+        || isOneThirteen() || isOneFourteen() || isOneFifteen() || isOneSixteen() || isOneSeventeen();
   }
 
   /**
    * @return Whether the bukkit in use is for MC >= 1.9
    */
   public static boolean isOneNine() {
-    return Bukkit.getVersion().contains("1.9") || isOneTen() || isOneEleven() || isOneTwelve() || isOneThirteen() || isOneFourteen();
+    return Bukkit.getVersion().contains("1.9") || isOneTen() || isOneEleven() || isOneTwelve() || isOneThirteen() ||
+        isOneFourteen() || isOneFifteen() || isOneSixteen() || isOneSeventeen();
   }
 
   /**
    * @return Whether the bukkit in use is for MC >= 1.10
    */
   public static boolean isOneTen() {
-    return Bukkit.getVersion().contains("1.10") || isOneEleven() || isOneTwelve() || isOneThirteen() || isOneFourteen();
+    return Bukkit.getVersion().contains("1.10") || isOneEleven() || isOneTwelve() || isOneThirteen() || isOneFourteen()
+        || isOneFifteen() || isOneSixteen() || isOneSeventeen();
   }
 
   /**
    * @return Whether the bukkit in use is for MC >= 1.11
    */
   public static boolean isOneEleven() {
-    return Bukkit.getVersion().contains("1.11") || isOneTwelve() || isOneThirteen() || isOneFourteen();
+    return Bukkit.getVersion().contains("1.11") || isOneTwelve() || isOneThirteen() || isOneFourteen() || isOneFifteen()
+        || isOneSixteen() || isOneSeventeen();
   }
 
   /**
    * @return Whether the bukkit in use is for MC >= 1.12
    */
   public static boolean isOneTwelve() {
-    return Bukkit.getVersion().contains("1.12") || isOneThirteen() || isOneFourteen();
+    return Bukkit.getVersion().contains("1.12") || isOneThirteen() || isOneFourteen() || isOneFifteen() || isOneSixteen()
+        || isOneSeventeen();
   }
 
   public static boolean isOneThirteen() {
-    return Bukkit.getVersion().contains("1.13") || isOneFourteen();
+    return Bukkit.getVersion().contains("1.13") || isOneFourteen() || isOneFifteen() || isOneSixteen() || isOneSeventeen();
   }
 
   public static boolean isOneFourteen() {
-    return Bukkit.getVersion().contains("1.14");
+    return Bukkit.getVersion().contains("1.14") || isOneFifteen() || isOneSixteen() || isOneSeventeen();
+  }
+
+  public static boolean isOneFifteen() {
+    return Bukkit.getVersion().contains("1.15") || isOneSixteen() || isOneSeventeen();
+  }
+
+  public static boolean isOneSixteen() {
+    return Bukkit.getVersion().contains("1.16") || isOneSeventeen();
+  }
+
+  public static boolean isOneSeventeen() {
+    return Bukkit.getVersion().contains("1.17");
   }
 
   public static boolean offHand() {
@@ -128,6 +148,10 @@ public class MISCUtils {
       return player.getInventory().getItemInMainHand().getType();
     }
     return player.getInventory().getItemInHand().getType();
+  }
+
+  public static File[] getYAMLs(final File directory) {
+    return directory.listFiles((dir, name) -> name.endsWith(".yml"));
   }
 
   public static Boolean isBoolean(String value) {
@@ -306,6 +330,17 @@ public class MISCUtils {
 
   public static void extract(CommandSender sender) throws SQLException {
     File file = new File(TNE.instance().getDataFolder(), "extracted.yml");
+
+    if(file.exists()) {
+      final File directory = new File(TNE.instance().getDataFolder(), "extractions");
+      directory.mkdir();
+
+      final String fileName = "extracted-" + new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date()) + ".yml";
+      final File moved = new File(TNE.instance().getDataFolder(), "extractions/" + fileName);
+
+      file.renameTo(moved);
+    }
+
     if(!file.exists()) {
       try {
         file.createNewFile();
@@ -339,14 +374,11 @@ public class MISCUtils {
       TNE.debug(e);
     }
 
-    LocalDateTime now = LocalDateTime.now();
-    int year = now.getYear();
-    int month = now.getMonthValue();
-    int day = now.getDayOfMonth();
+    final LocalDateTime now = LocalDateTime.now();
 
     StringBuilder content = new StringBuilder();
 
-    String name = TNE.instance().getServerName() + "-" + year + "-" + month + "-" + day + "-extracted.yml";
+    String name = TNE.instance().getServerName() + "-" + now.getYear() + "-" + now.getMonthValue() + "-" + now.getDayOfMonth() + "-extracted.yml";
     try (BufferedReader br = new BufferedReader(new FileReader(new File(TNE.instance().getDataFolder(),"extracted.yml")))){
       String line;
       while ((line = br.readLine()) != null) {
